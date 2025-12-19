@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SCRAMBLE</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d1525">
+  <script
+    src="https://unpkg.com/nanalytics-tracker@0.1.2/dist/index.global.js"
+    data-site-uuid="0f48fa29-c7b3-4880-8428-4ade7c99d591"
+    data-cvm-pubkey="d8a066f85d621d634e24ee0bf741e27b6436af28782195de8aa90972e310e937"
+  ></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0a0a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: 'Courier New', monospace;
+      touch-action: none;
+      user-select: none;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .game-container {
+      background-color: #0d1525;
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #1a3a5c;
+      box-shadow: 0 0 20px rgba(0, 150, 200, 0.2);
+      max-height: calc(100dvh - 20px);
+      max-width: calc(100vw - 20px);
+      display: flex;
+      flex-direction: column;
+      transform-origin: center center;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 0 5px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background-color: #00ff88;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #00ff88;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .status-dot:hover {
+      transform: scale(1.3);
+    }
+
+    .title {
+      color: #4a9eff;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .stats {
+      color: #4a7a9e;
+      font-size: 11px;
+    }
+
+    .stats span {
+      color: #6ab0e0;
+    }
+
+    #gameCanvas {
+      background-color: #0a1628;
+      border: 2px solid #1a3a5c;
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .controls-hint {
+      color: #4a7a9e;
+      font-size: 10px;
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    .controls-hint .key {
+      color: #e8a030;
+    }
+
+    /* Mobile controls */
+    .mobile-controls {
+      display: none;
+      margin-top: 15px;
+      gap: 10px;
+    }
+
+    .control-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .control-col {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-btn {
+      width: 55px;
+      height: 55px;
+      background-color: #1a2a3a;
+      color: #6ab0e0;
+      border: 2px solid #2a4a6a;
+      border-radius: 8px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      transition: all 0.1s;
+    }
+
+    .control-btn:active {
+      background-color: #2a4a6a;
+      border-color: #4a9eff;
+      color: #4a9eff;
+    }
+
+    .control-btn.fire-btn {
+      width: 70px;
+      height: 70px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #e8a030;
+      border-color: #e8a030;
+    }
+
+    .control-btn.fire-btn:active {
+      background-color: #e8a030;
+      color: #0a1628;
+    }
+
+    .control-btn.bomb-btn {
+      width: 70px;
+      height: 70px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #ff8c00;
+      border-color: #ff8c00;
+    }
+
+    .control-btn.bomb-btn:active {
+      background-color: #ff8c00;
+      color: #0a1628;
+    }
+
+    /* Menu Modal */
+    .menu-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .menu-modal.active {
+      display: flex;
+    }
+
+    .menu-content {
+      background-color: #0d1525;
+      border: 2px solid #1a3a5c;
+      border-radius: 8px;
+      padding: 20px;
+      min-width: 280px;
+      max-width: calc(100vw - 40px);
+    }
+
+    .menu-content h3 {
+      color: #4a9eff;
+      margin-bottom: 15px;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
+
+    .menu-item {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: 1px solid #2a4a6a;
+      color: #6ab0e0;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .menu-item:hover {
+      border-color: #4a9eff;
+      color: #4a9eff;
+    }
+
+    .menu-item.danger {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
+    .menu-item.danger:hover {
+      background-color: #e74c3c;
+      color: #fff;
+    }
+
+    .menu-close {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: 1px solid #4a7a9e;
+      color: #4a7a9e;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .keys-display {
+      background-color: #0a1628;
+      border: 1px solid #1a3a5c;
+      border-radius: 5px;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-family: monospace;
+      font-size: 10px;
+      word-break: break-all;
+    }
+
+    .keys-display .label {
+      color: #4a7a9e;
+      font-size: 9px;
+      margin-bottom: 4px;
+    }
+
+    .keys-display .value {
+      color: #9b59b6;
+      margin-bottom: 10px;
+    }
+
+    .keys-display .masked {
+      color: #4a7a9e;
+      font-style: italic;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #4a7a9e;
+      color: #4a7a9e;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 9px;
+      cursor: pointer;
+      margin-left: 8px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .copy-btn:hover {
+      border-color: #9b59b6;
+      color: #9b59b6;
+    }
+
+    .copy-btn.copied {
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+
+    .key-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .key-row .value {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    /* Start Screen */
+    .start-screen {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(10, 22, 40, 0.98);
+      border: 2px solid #1a3a5c;
+      color: #6ab0e0;
+      padding: 30px 40px;
+      border-radius: 8px;
+      text-align: center;
+      z-index: 100;
+      width: 300px;
+      max-width: calc(100vw - 40px);
+    }
+
+    .start-screen h1 {
+      color: #4a9eff;
+      font-size: 24px;
+      margin-bottom: 8px;
+      letter-spacing: 4px;
+    }
+
+    .start-screen .subtitle {
+      color: #4a7a9e;
+      font-size: 11px;
+      margin-bottom: 20px;
+    }
+
+    .start-screen .instructions {
+      color: #6ab0e0;
+      font-size: 10px;
+      margin-bottom: 20px;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    .start-screen .instructions .key {
+      color: #e8a030;
+    }
+
+    .start-screen button {
+      display: block;
+      width: 100%;
+      background-color: transparent;
+      color: #e8a030;
+      border: 2px solid #e8a030;
+      padding: 12px 30px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+      margin-bottom: 10px;
+    }
+
+    .start-screen button:hover {
+      background-color: #e8a030;
+      color: #0a1628;
+    }
+
+    .start-screen .btn-nip07 {
+      color: #9b59b6;
+      border-color: #9b59b6;
+    }
+
+    .start-screen .btn-nip07:hover {
+      background-color: #9b59b6;
+      color: #fff;
+    }
+
+    .start-screen .player-info {
+      margin-top: 15px;
+      font-size: 10px;
+      color: #4a7a9e;
+    }
+
+    .start-screen .player-info .npub {
+      color: #9b59b6;
+      font-family: monospace;
+    }
+
+    /* Game Over / Victory Overlay */
+    .game-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(10, 22, 40, 0.98);
+      border: 2px solid #e8a030;
+      color: #e8a030;
+      padding: 30px 40px;
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+      box-shadow: 0 0 30px rgba(232, 160, 48, 0.3);
+      z-index: 100;
+      width: 280px;
+      max-width: calc(100vw - 40px);
+    }
+
+    .game-overlay.victory {
+      border-color: #00ff88;
+      color: #00ff88;
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+    }
+
+    .game-overlay h2 {
+      margin-bottom: 10px;
+      letter-spacing: 3px;
+    }
+
+    .game-overlay p {
+      color: #6ab0e0;
+      margin-bottom: 15px;
+    }
+
+    .game-overlay button {
+      background-color: transparent;
+      color: #e8a030;
+      border: 2px solid #e8a030;
+      padding: 10px 30px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .game-overlay button:hover {
+      background-color: #e8a030;
+      color: #0a1628;
+    }
+
+    .game-overlay.victory button {
+      color: #00ff88;
+      border-color: #00ff88;
+    }
+
+    .game-overlay.victory button:hover {
+      background-color: #00ff88;
+      color: #0a1628;
+    }
+
+    .game-overlay .btn-nostr {
+      color: #9b59b6;
+      border-color: #9b59b6;
+    }
+
+    .game-overlay .btn-nostr:hover {
+      background-color: #9b59b6;
+      color: #fff;
+    }
+
+    .game-overlay .btn-nostr:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .publish-status {
+      font-size: 11px;
+      margin-top: 8px;
+      color: #6ab0e0;
+    }
+
+    @media (max-width: 600px) {
+      .controls-hint {
+        display: none;
+      }
+    }
+
+    @media (pointer: coarse) {
+      .mobile-controls {
+        display: flex;
+        flex-direction: column;
+      }
+    }
+
+    @media (max-height: 600px) and (pointer: coarse) {
+      .mobile-controls {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="header">
+      <div class="status-dot"></div>
+      <div class="title">SCRAMBLE</div>
+      <div class="stats">Score: <span id="score">0</span></div>
+    </div>
+    <canvas id="gameCanvas" width="480" height="320"></canvas>
+    <div class="controls-hint">
+      Move: <span class="key">Arrow Keys</span> | Fire: <span class="key">Space</span> | Bomb: <span class="key">X</span>
+    </div>
+  </div>
+
+  <div class="mobile-controls">
+    <div class="control-row">
+      <div class="control-col">
+        <button class="control-btn" id="btnUp">&#9650;</button>
+        <button class="control-btn" id="btnDown">&#9660;</button>
+      </div>
+      <button class="control-btn fire-btn" id="btnFire">FIRE</button>
+      <button class="control-btn bomb-btn" id="btnBomb">BOMB</button>
+    </div>
+  </div>
+
+  <!-- Menu Modal -->
+  <div class="menu-modal" id="menuModal">
+    <div class="menu-content" id="menuContent">
+      <!-- Content will be set by JS -->
+    </div>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="start-screen" id="startScreen">
+    <h1>SCRAMBLE</h1>
+    <div class="subtitle">Navigate the cave. Destroy all targets.</div>
+    <div class="instructions">
+      <span class="key">Arrow Keys</span> - Move ship<br>
+      <span class="key">Space</span> - Fire laser<br>
+      <span class="key">X</span> - Drop bomb<br>
+      <br>
+      Destroy fuel tanks to refuel!
+    </div>
+    <button id="startGameBtn">START MISSION</button>
+    <button class="btn-nip07" id="startNip07Btn" style="display:none;">Login with NIP-07</button>
+    <div class="player-info">
+      Playing as <span class="npub" id="startNpub">...</span>
+    </div>
+  </div>
+
+  <!-- Game Over Overlay -->
+  <div class="game-overlay" id="gameOverScreen">
+    <h2>MISSION FAILED</h2>
+    <p>Score: <span id="finalScore">0</span></p>
+    <button id="restartBtn">TRY AGAIN</button>
+    <button class="btn-nostr" id="publishNostrBtn">Share on Nostr</button>
+    <div class="publish-status" id="publishStatus"></div>
+  </div>
+
+  <!-- Victory Overlay -->
+  <div class="game-overlay victory" id="victoryScreen">
+    <h2>MISSION COMPLETE!</h2>
+    <p>You destroyed the fortress!</p>
+    <p>Final Score: <span id="victoryScore">0</span></p>
+    <button id="playAgainBtn">PLAY AGAIN</button>
+    <button class="btn-nostr" id="publishVictoryBtn">Share on Nostr</button>
+    <div class="publish-status" id="victoryPublishStatus"></div>
+  </div>
+
+  <script src="nostr.js"></script>
+  <script type="module">
+    import { Game, GameState } from './game.js';
+
+    const canvas = document.getElementById('gameCanvas');
+    const game = new Game(canvas);
+
+    // UI Elements
+    const scoreElement = document.getElementById('score');
+    const startScreen = document.getElementById('startScreen');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const startNip07Btn = document.getElementById('startNip07Btn');
+    const startNpub = document.getElementById('startNpub');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const finalScoreElement = document.getElementById('finalScore');
+    const restartBtn = document.getElementById('restartBtn');
+    const publishNostrBtn = document.getElementById('publishNostrBtn');
+    const publishStatus = document.getElementById('publishStatus');
+    const victoryScreen = document.getElementById('victoryScreen');
+    const victoryScoreElement = document.getElementById('victoryScore');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+    const publishVictoryBtn = document.getElementById('publishVictoryBtn');
+    const victoryPublishStatus = document.getElementById('victoryPublishStatus');
+
+    // State change callback
+    game.onStateChange = (newState, oldState, data) => {
+      // Hide all overlays first
+      startScreen.style.display = 'none';
+      gameOverScreen.style.display = 'none';
+      victoryScreen.style.display = 'none';
+
+      switch (newState) {
+        case GameState.START_SCREEN:
+          startScreen.style.display = 'block';
+          break;
+        case GameState.GAME_OVER:
+          finalScoreElement.textContent = game.score;
+          gameOverScreen.style.display = 'block';
+          resetPublishButton(publishNostrBtn, publishStatus);
+          break;
+        case GameState.VICTORY:
+          victoryScoreElement.textContent = game.score;
+          victoryScreen.style.display = 'block';
+          resetPublishButton(publishVictoryBtn, victoryPublishStatus);
+          break;
+      }
+    };
+
+    // Score change callback
+    game.onScoreChange = (score) => {
+      scoreElement.textContent = score;
+    };
+
+    // Keyboard input
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          e.preventDefault();
+          game.setInput('up', true);
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          e.preventDefault();
+          game.setInput('down', true);
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          e.preventDefault();
+          game.setInput('left', true);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          game.setInput('right', true);
+          break;
+        case ' ':
+          e.preventDefault();
+          game.setInput('shoot', true);
+          break;
+        case 'x':
+        case 'X':
+          e.preventDefault();
+          game.setInput('bomb', true);
+          break;
+        case 'p':
+        case 'P':
+        case 'Escape':
+          e.preventDefault();
+          game.pause();
+          break;
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          game.setInput('up', false);
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          game.setInput('down', false);
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          game.setInput('left', false);
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          game.setInput('right', false);
+          break;
+        case ' ':
+          game.setInput('shoot', false);
+          break;
+        case 'x':
+        case 'X':
+          game.setInput('bomb', false);
+          break;
+      }
+    });
+
+    // Mobile controls
+    const btnUp = document.getElementById('btnUp');
+    const btnDown = document.getElementById('btnDown');
+    const btnFire = document.getElementById('btnFire');
+    const btnBomb = document.getElementById('btnBomb');
+
+    function setupMobileButton(btn, inputKey) {
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        game.setInput(inputKey, true);
+      }, { passive: false });
+
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        game.setInput(inputKey, false);
+      }, { passive: false });
+
+      btn.addEventListener('mousedown', () => game.setInput(inputKey, true));
+      btn.addEventListener('mouseup', () => game.setInput(inputKey, false));
+      btn.addEventListener('mouseleave', () => game.setInput(inputKey, false));
+    }
+
+    setupMobileButton(btnUp, 'up');
+    setupMobileButton(btnDown, 'down');
+    setupMobileButton(btnFire, 'shoot');
+    setupMobileButton(btnBomb, 'bomb');
+
+    // Prevent scrolling on mobile
+    document.body.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+
+    // Start game button
+    startGameBtn.addEventListener('click', () => {
+      startScreen.style.display = 'none';
+      game.start();
+    });
+
+    // Restart buttons
+    restartBtn.addEventListener('click', () => {
+      gameOverScreen.style.display = 'none';
+      game.restart();
+    });
+
+    playAgainBtn.addEventListener('click', () => {
+      victoryScreen.style.display = 'none';
+      game.restart();
+    });
+
+    // Nostr integration
+    function updateStartScreen() {
+      if (typeof window.NostrGame === 'undefined') {
+        setTimeout(updateStartScreen, 100);
+        return;
+      }
+
+      const player = window.NostrGame.getPlayer();
+      if (!player) {
+        startNpub.textContent = '...';
+        return;
+      }
+
+      const shortNpub = window.NostrGame.getShortNpub(player.npub);
+      startNpub.textContent = shortNpub;
+
+      if (window.NostrGame.hasNostrExtension() && !player.isExtension) {
+        startNip07Btn.style.display = 'block';
+      } else {
+        startNip07Btn.style.display = 'none';
+      }
+    }
+
+    startNip07Btn.addEventListener('click', async () => {
+      try {
+        startNip07Btn.disabled = true;
+        startNip07Btn.textContent = 'Connecting...';
+        await window.NostrGame.loginWithExtension();
+        updateStartScreen();
+      } catch (err) {
+        alert('Login failed: ' + err.message);
+      } finally {
+        startNip07Btn.disabled = false;
+        startNip07Btn.textContent = 'Login with NIP-07';
+      }
+    });
+
+    // Publish to Nostr
+    function resetPublishButton(btn, statusEl) {
+      btn.disabled = false;
+      btn.textContent = 'Share on Nostr';
+      statusEl.textContent = '';
+    }
+
+    async function publishScore(btn, statusEl) {
+      if (typeof window.NostrGame === 'undefined') {
+        statusEl.textContent = 'Nostr not ready';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Publishing...';
+      statusEl.textContent = '';
+
+      try {
+        const gameUrl = window.location.href;
+        const result = await window.NostrGame.publishGameResult(game.score, gameUrl, 'Scramble');
+
+        const successCount = result.results.filter(r => r.success).length;
+        if (successCount > 0) {
+          statusEl.innerHTML = `Published to ${successCount} relay(s)!`;
+          btn.textContent = 'Published!';
+        } else {
+          statusEl.textContent = 'Failed to publish to relays';
+          btn.textContent = 'Share on Nostr';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+        btn.textContent = 'Share on Nostr';
+        btn.disabled = false;
+      }
+    }
+
+    publishNostrBtn.addEventListener('click', () => publishScore(publishNostrBtn, publishStatus));
+    publishVictoryBtn.addEventListener('click', () => publishScore(publishVictoryBtn, victoryPublishStatus));
+
+    // Menu functionality
+    const statusDot = document.querySelector('.status-dot');
+    const menuModal = document.getElementById('menuModal');
+    const menuContent = document.getElementById('menuContent');
+
+    function showMainMenu() {
+      menuContent.innerHTML = `
+        <h3>MENU</h3>
+        <button class="menu-item" id="menuShowKeys">Show Keys</button>
+        <button class="menu-item danger" id="menuNewPlayer">New Player</button>
+        <button class="menu-close" id="menuClose">Close</button>
+      `;
+      menuModal.classList.add('active');
+
+      document.getElementById('menuShowKeys').onclick = showKeysMenu;
+      document.getElementById('menuNewPlayer').onclick = confirmNewPlayer;
+      document.getElementById('menuClose').onclick = closeMenu;
+    }
+
+    function showKeysMenu() {
+      if (typeof window.NostrGame === 'undefined') return;
+
+      const player = window.NostrGame.getPlayer();
+      if (!player) return;
+
+      const npubDisplay = player.npub || 'Not available';
+      const hasNsec = !player.isExtension && player.nsec;
+
+      let nsecHtml;
+      if (player.isExtension) {
+        nsecHtml = '<span class="masked">Not available (using extension)</span>';
+      } else if (player.nsec) {
+        nsecHtml = `
+          <div class="key-row">
+            <div class="value">${player.nsec}</div>
+            <button class="copy-btn" id="copyNsec">COPY</button>
+          </div>
+        `;
+      } else {
+        nsecHtml = '<span class="masked">Not available</span>';
+      }
+
+      menuContent.innerHTML = `
+        <h3>YOUR KEYS</h3>
+        <div class="keys-display">
+          <div class="label">PUBLIC KEY (npub)</div>
+          <div class="key-row">
+            <div class="value">${npubDisplay}</div>
+            <button class="copy-btn" id="copyNpub">COPY</button>
+          </div>
+          <div class="label" style="margin-top: 10px;">PRIVATE KEY (nsec)</div>
+          ${hasNsec ? nsecHtml : `<div class="value">${nsecHtml}</div>`}
+        </div>
+        <button class="menu-item" id="menuBack">Back</button>
+        <button class="menu-close" id="menuClose">Close</button>
+      `;
+
+      document.getElementById('copyNpub').onclick = () => copyToClipboard(player.npub, 'copyNpub');
+      if (hasNsec) {
+        document.getElementById('copyNsec').onclick = () => copyToClipboard(player.nsec, 'copyNsec');
+      }
+      document.getElementById('menuBack').onclick = showMainMenu;
+      document.getElementById('menuClose').onclick = closeMenu;
+    }
+
+    async function copyToClipboard(text, btnId) {
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById(btnId);
+        btn.textContent = 'COPIED';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      } catch (err) {
+        alert('Failed to copy');
+      }
+    }
+
+    function confirmNewPlayer() {
+      menuContent.innerHTML = `
+        <h3>NEW PLAYER</h3>
+        <p style="color: #e74c3c; font-size: 11px; margin-bottom: 15px;">
+          This will generate a new identity. Your current keys will be lost forever!
+        </p>
+        <button class="menu-item danger" id="menuConfirmNew">Yes, Generate New Key</button>
+        <button class="menu-item" id="menuBack">Cancel</button>
+      `;
+
+      document.getElementById('menuConfirmNew').onclick = async () => {
+        if (typeof window.NostrGame !== 'undefined') {
+          await window.NostrGame.logout();
+          updateStartScreen();
+        }
+        closeMenu();
+      };
+      document.getElementById('menuBack').onclick = showMainMenu;
+    }
+
+    function closeMenu() {
+      menuModal.classList.remove('active');
+    }
+
+    statusDot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showMainMenu();
+    });
+
+    menuModal.addEventListener('click', (e) => {
+      if (e.target === menuModal) {
+        closeMenu();
+      }
+    });
+
+    // Responsive scaling
+    const gameContainer = document.querySelector('.game-container');
+
+    function resizeGame() {
+      const containerWidth = 480 + 30 + 4;
+      const containerHeight = 320 + 30 + 4 + 50;
+
+      const vv = window.visualViewport;
+      const availableWidth = (vv ? vv.width : window.innerWidth) - 20;
+      const availableHeight = (vv ? vv.height : window.innerHeight) - 20;
+
+      const scaleX = availableWidth / containerWidth;
+      const scaleY = availableHeight / containerHeight;
+      const scale = Math.min(scaleX, scaleY, 1.5);
+
+      gameContainer.style.transform = `scale(${scale})`;
+    }
+
+    window.addEventListener('resize', resizeGame);
+    window.addEventListener('orientationchange', () => setTimeout(resizeGame, 100));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', resizeGame);
+    }
+    resizeGame();
+
+    // Initialize
+    setTimeout(updateStartScreen, 200);
+
+    // Initial render
+    game.render();
+  </script>
+</body>
+</html>

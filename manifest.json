@@ -1,0 +1,17 @@
+{
+  "name": "Scramble",
+  "short_name": "Scramble",
+  "description": "Navigate the cave and destroy all targets!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0d1525",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
