@@ -838,14 +838,44 @@
     const menuContent = document.getElementById('menuContent');
 
     function showMainMenu() {
+      const player = window.NostrGame?.getPlayer();
+      const hasExtension = window.NostrGame?.hasNostrExtension();
+      const isUsingExtension = player?.isExtension;
+
+      // Show NIP-07 login if extension available and not already using it
+      const nip07Button = (hasExtension && !isUsingExtension)
+        ? '<button class="menu-item" id="menuNip07" style="color: #9b59b6; border-color: #9b59b6;">Login with NIP-07</button>'
+        : '';
+
+      // Show current identity
+      const currentId = player
+        ? `<div style="color: #4a7a9e; font-size: 10px; margin-bottom: 15px;">Playing as: <span style="color: #9b59b6;">${window.NostrGame.getShortNpub(player.npub)}</span>${isUsingExtension ? ' (extension)' : ''}</div>`
+        : '';
+
       menuContent.innerHTML = `
         <h3>MENU</h3>
+        ${currentId}
+        ${nip07Button}
         <button class="menu-item" id="menuShowKeys">Show Keys</button>
         <button class="menu-item danger" id="menuNewPlayer">New Player</button>
         <button class="menu-close" id="menuClose">Close</button>
       `;
       menuModal.classList.add('active');
 
+      if (hasExtension && !isUsingExtension) {
+        document.getElementById('menuNip07').onclick = async () => {
+          try {
+            document.getElementById('menuNip07').textContent = 'Connecting...';
+            document.getElementById('menuNip07').disabled = true;
+            await window.NostrGame.loginWithExtension();
+            updateStartScreen();
+            showMainMenu(); // Refresh menu to show new identity
+          } catch (err) {
+            alert('Login failed: ' + err.message);
+            showMainMenu();
+          }
+        };
+      }
       document.getElementById('menuShowKeys').onclick = showKeysMenu;
       document.getElementById('menuNewPlayer').onclick = confirmNewPlayer;
       document.getElementById('menuClose').onclick = closeMenu;
